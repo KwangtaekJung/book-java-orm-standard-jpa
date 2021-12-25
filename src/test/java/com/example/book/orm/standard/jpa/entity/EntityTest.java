@@ -25,15 +25,18 @@ public class EntityTest {
     @Rollback(value = false)
     public void entityMappingTest() {
         Team team = new Team();
+        team.setId(1L);
         team.setName("Team1");
         em.persist(team);
 
         Member member1 = new Member();
+        member1.setId(1L);
         member1.setUsername("User1");
         member1.setTeam(team);
         em.persist(member1);
 
         Member member2 = new Member();
+        member2.setId(2L);
         member2.setUsername("User2");
         member2.setTeam(team);
         em.persist(member2);
