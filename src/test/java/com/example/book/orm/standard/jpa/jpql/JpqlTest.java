@@ -4,6 +4,7 @@ import com.example.book.orm.standard.jpa.entity.Member;
 import com.example.book.orm.standard.jpa.entity.Team;
 import com.example.book.orm.standard.jpa.repository.MemberRepository;
 import com.example.book.orm.standard.jpa.repository.TeamRepository;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -32,8 +33,7 @@ public class JpqlTest {
     //따라서 EntityManager 로 영속성 관리를 하려면 EntityManagerFactory로 직접 만들어서 사용한다.
     private EntityManager em;
 
-    @BeforeEach
-    @Transactional
+    @BeforeAll
     public void beforeAll() {
         em = emf.createEntityManager();
 

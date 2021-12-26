@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
 
-@Component
+//@Component
 public class AppRunner implements ApplicationRunner {
 
     @Autowired
