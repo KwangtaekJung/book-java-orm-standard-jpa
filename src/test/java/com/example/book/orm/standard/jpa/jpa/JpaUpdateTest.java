@@ -1,8 +1,11 @@
 package com.example.book.orm.standard.jpa.jpa;
 
 import com.example.book.orm.standard.jpa.entity.Member;
+import com.example.book.orm.standard.jpa.entity.QMember;
+import com.example.book.orm.standard.jpa.entity.QTeam;
 import com.example.book.orm.standard.jpa.entity.Team;
 import com.example.book.orm.standard.jpa.entity.TeamDTO;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -50,6 +53,9 @@ public class JpaUpdateTest {
 
     private EntityManager em;
     private EntityTransaction transaction;
+
+    QMember member = new QMember("m");
+    QTeam team = new QTeam("t");
 
     @BeforeAll
     public void beforeAll() {
@@ -132,17 +138,23 @@ public class JpaUpdateTest {
     public void update_with_JPQL() {
         //JPA는 update 쿼리를 사용하지 않고 변경 감지에 의해 엔티티를 수정한다.
         //JPQL or NativeQuery를 이용할 수는 있지만 이 경우 DB에 직접 넣기 때문에 영속성 컨텍스트의 무결성이 깨질수 있으니 주의해야 한다.
-        Member member = em.find(Member.class, 101L);
+        //실제 DB에 저장은, 역시나 transaction.commit() 하는 시점에 이루어진다.
+        Long userId = 101L;
+        int userAge = 25;
+        Member member = em.find(Member.class, userId);
         System.out.println(member);
 
-        String jpql = "UPDATE Member m SET m.age = :newAge where m.id = 1";
+        String jpql = "UPDATE Member m SET m.age = :newAge WHERE m.id = :id";
 
         Query query = em.createQuery(jpql)
-                .setParameter("newAge", member.getAge() + 5);
+                .setParameter("id", userId)
+                .setParameter("newAge", userAge);
         int resultCount = query.executeUpdate();
 
-        em.refresh(member);
+        transaction.commit();  //실제 DB에 저장시킨다.
+        em.refresh(member);  //DB와 싱크를 맞춘다.
         System.out.println(member);
+        Assertions.assertThat(member.getAge()).isEqualTo(userAge);
     }
 
     @Test
@@ -150,27 +162,55 @@ public class JpaUpdateTest {
     public void update_with_NativeQuery() {
         //JPA는 update 쿼리를 사용하지 않고 변경 감지에 의해 엔티티를 수정한다.
         //JPQL or NativeQuery를 이용할 수는 있지만 이 경우 DB에 직접 넣기 때문에 영속성 컨텍스트의 무결성이 깨질수 있으니 주의해야 한다.
+        //실제 DB에 저장은, 역시나 transaction.commit() 하는 시점에 이루어진다.
         //JPQL은 Entity와 Entity의 속성에 대해 대소문자를 구분한다.
         //NativeQuery 은 테이블과 테이블 속성에 대해 대소문자를 구분하지 않는다.
 
-        Member member = em.find(Member.class, 101L);
+        Long userId = 101L;
+        int userAge = 38;
+        Member member = em.find(Member.class, userId);
         System.out.println(member);
 
-        String nativeQuery = "UPDATE member SET age = :newAge WHERE member_id = 1";
+        String nativeQuery = "UPDATE member SET age = :newAge WHERE member_id = :id";
 
         Query query = em.createNativeQuery(nativeQuery)
-                .setParameter("newAge", 25);
+                .setParameter("id", userId)
+                .setParameter("newAge", userAge);
         int resultCount = query.executeUpdate();
 
         System.out.println("resultCount = " + resultCount);
 
+        transaction.commit();
         em.refresh(member);
         System.out.println(member);
     }
 
     @Test
-    @DisplayName("103. [JPA][UPDATE] QueryDSL")
+    @DisplayName("103. [JPA][UPDATE] QueryDSL - UPDATE")
     public void update_queryDsl() {
+        JPAQueryFactory queryFactory = new JPAQueryFactory(em);
+        Long userId = 201L;
+        int userAge = 55;
 
+        //Entity 조회
+        Member member = em.find(Member.class, userId);
+        System.out.println(member);
+
+        //DB Update
+        long resultCount = queryFactory
+                .update(this.member)
+                .where(this.member.id.eq(userId))
+                .set(this.member.age, userAge)
+                .execute();
+
+        //DB 실제 저장
+        transaction.commit();
+
+        //Entity 확인: 아직 Entity에는 반영되어 있지 않다.(무결성 깨짐)
+        System.out.println(member);
+
+        //DB와 싱크
+        em.refresh(member);
+        System.out.println(member);
     }
 }

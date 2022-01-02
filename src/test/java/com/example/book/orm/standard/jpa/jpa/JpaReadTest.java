@@ -1,8 +1,12 @@
 package com.example.book.orm.standard.jpa.jpa;
 
 import com.example.book.orm.standard.jpa.entity.Member;
+import com.example.book.orm.standard.jpa.entity.QMember;
+import com.example.book.orm.standard.jpa.entity.QTeam;
 import com.example.book.orm.standard.jpa.entity.Team;
 import com.example.book.orm.standard.jpa.entity.TeamDTO;
+import com.querydsl.core.Tuple;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -50,6 +54,11 @@ public class JpaReadTest {
 
     private EntityManager em;
     private EntityTransaction transaction;
+    private JPAQueryFactory queryFactory;
+
+    QMember member = new QMember("m");
+    QTeam team = new QTeam("t");
+
 
     @BeforeAll
     public void beforeAll() {
@@ -114,7 +123,7 @@ public class JpaReadTest {
     }
 
     @Test
-    @DisplayName("100. [JPA][READ] em.find() and lazyLoading")
+    @DisplayName("100. [JPA][READ] 기본 Entity 조회 - em.find() & lazyLoading")
     public void lazyLoading() {
         Member member = em.find(Member.class, 101L);
         System.out.println(member.getUsername());
@@ -122,7 +131,7 @@ public class JpaReadTest {
     }
 
     @Test
-    @DisplayName("101. [JPA][READ] JPQL SELECT and lazyLoading")
+    @DisplayName("101. [JPA][READ] 기본 Entity 조회 - JPQL & lazyLoading")
     public void lazyLoading_with_JPQL() {
         String jpql = "SELECT m FROM Member m";
 
@@ -130,29 +139,37 @@ public class JpaReadTest {
         List<Member> resultList = query.getResultList();
 
         for (Member member : resultList) {
-            System.out.println("member.username = " + member.getUsername());
-            System.out.println("member.team.name = " + member.getTeam().getName());
+            System.out.println(String.format("member.username(%s), member.team.name(%s)",
+                    member.getUsername(), member.getTeam().getName()));
         }
     }
 
     @Test
-    @DisplayName("110. [JPA][READ] JPQL Projection - 여러 값 조회")
-    public void read_JPQL_Projection_multi_Entity() {
-        //여러 값을 조회하는 경우이다.
-        //경로 표현식(m.team.name)에 의해 묵시적인 조인이 발생한다.(실제 SQL 쿼리 확인 할 것)
-        String jpql = "SELECT m, m.team.name FROM Member m";
+    @DisplayName("102. [JPA][READ] 기본 Entity 조회 - QueryDSL")
+    public void read_queryDsl() {
+        queryFactory = new JPAQueryFactory(em);
 
-        Query query = em.createQuery(jpql);
-        List<Object[]> resultList = query.getResultList();
+        List<Member> members = queryFactory
+                .select(member)
+                .from(member)
+                .fetch();
 
-        for (Object[] row : resultList) {
-            System.out.println("member: " + row[0]);
-            System.out.println("member.team.name = " + row[1]);
-        }
+        members.forEach(System.out::println);
     }
 
     @Test
-    @DisplayName("111. [JPA][READ] JPQL Projection - Scala")
+    @DisplayName("103. [JPA][READ] 기본 Entity 조회 - NativeQuery")
+    public void read_nativeDsl() {
+        String nativeQuery = "SELECT * FROM member";
+
+        Query query = em.createNativeQuery(nativeQuery, Member.class);
+        List<Member> resultList = query.getResultList();
+
+        resultList.forEach(System.out::println);
+    }
+
+    @Test
+    @DisplayName("110. [JPA][READ] Projection(Scala) - JPQL")
     public void read_jqpl_scala_projection() {
         String jpql = "SELECT t.name, SIZE(t.members) FROM Team t";
 
@@ -166,7 +183,57 @@ public class JpaReadTest {
     }
 
     @Test
-    @DisplayName("112. [JPA][READ] JPQL Projection - Closed Class-Based Projection")
+    @DisplayName("111. [JPA][READ] Projection(여러 값 조회) - JPQL")
+    public void read_JPQL_Projection_multi_Entity() {
+        //여러 값을 조회하는 경우이다.
+        //PathExpression/경로 표현식(m.team.name)에 의해 묵시적인 조인이 발생한다.(실제 SQL 쿼리 확인 할 것)
+        String jpql = "SELECT m, m.team.name FROM Member m";
+
+        Query query = em.createQuery(jpql);
+        List<Object[]> resultList = query.getResultList();
+
+        for (Object[] row : resultList) {
+            System.out.println("member: " + row[0]);
+            System.out.println("member.team.name = " + row[1]);
+        }
+    }
+
+    @Test
+    @DisplayName("112. [JPA][READ] Projection(여러값 조회) - QueryDSL")
+    public void read_projection_multiValues_queryDSL() {
+        //경로 표현식??(member.team.name)에 의해 묵시적인 조인이 발생한다.(실제 SQL 쿼리 확인 할 것)
+        JPAQueryFactory queryFactory = new JPAQueryFactory(em);
+
+        List<Tuple> tuples = queryFactory
+                .select(member, member.team.name)
+                .from(member)
+                .fetch();
+
+        for (Tuple tuple : tuples) {
+            System.out.println(tuple.get(member) + ", " + tuple.get(member.team.name));
+        }
+    }
+
+    @Test
+    @DisplayName("113. [JPA][READ] Projection(여러값 조회) - NativeQuery")
+    public void read_projection_multiValues_nativeQuery() {
+        //NativeQuery는 묵시적인 조인이 발생하지 않는가??
+        //NativeQuery에서 alias를 사용하면 JPQL과 매우 유사해진다.
+        String nativeQuery = "SELECT member_id, username, team_id FROM member";
+//      String nativeQuery = "SELECT m.member_id, m.username, m.team_id FROM member as m";
+
+        Query query = em.createNativeQuery(nativeQuery);
+        List<Object[]> resultList = query.getResultList();
+
+        for (Object[] row : resultList) {
+            System.out.println("member.id: " + row[0]);
+            System.out.println("member.username: " + row[1]);
+            System.out.println("member.team.id = " + row[2]);
+        }
+    }
+
+    @Test
+    @DisplayName("114. [JPA][READ] JPQL Projection - Closed Class-Based Projection")
     public void read_jqpl_classBased_projection_closed() {
         String jpql = "SELECT new com.example.book.orm.standard.jpa.entity.TeamDTO(t.name, SIZE(t.members)) " +
                 " FROM Team t";
