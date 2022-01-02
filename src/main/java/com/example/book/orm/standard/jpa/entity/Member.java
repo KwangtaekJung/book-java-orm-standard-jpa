@@ -47,12 +47,29 @@ public class Member {
     @OneToMany(mappedBy = "member")
     private List<Order> orders = new ArrayList<>();
 
+    //연관 관계 매핑 Convenient Method
+    public void setTeam(Team team) {
+        //기존 연관 관계가 있을 경우 제거
+        if (this.team != null) {
+            this.team.getMembers().remove(this);
+        }
+
+        if (team != null) {
+            //연관 관계 설정
+            this.team = team;
+            this.team.getMembers().add(this);
+        } else {
+            //연관 관계 제거
+            this.team = null;
+        }
+    }
+
     @Override
     public String toString() {
         return "Member{" +
                 "id=" + id +
                 ", name='" + username + '\'' +
-//                ", address=" + address +
+                ", age=" + age +
                 '}';
     }
 }

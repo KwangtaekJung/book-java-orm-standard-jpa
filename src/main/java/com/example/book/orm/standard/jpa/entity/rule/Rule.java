@@ -1,8 +1,7 @@
-package com.example.book.orm.standard.jpa.rule;
+package com.example.book.orm.standard.jpa.entity.rule;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;

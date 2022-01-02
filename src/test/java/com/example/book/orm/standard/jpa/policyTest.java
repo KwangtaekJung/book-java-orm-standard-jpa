@@ -1,10 +1,9 @@
 package com.example.book.orm.standard.jpa;
 
-import com.example.book.orm.standard.jpa.rule.Network;
-import com.example.book.orm.standard.jpa.rule.Policy;
-import com.example.book.orm.standard.jpa.rule.Rule;
-import com.example.book.orm.standard.jpa.rule.Service;
-import org.junit.jupiter.api.Disabled;
+import com.example.book.orm.standard.jpa.entity.rule.Network;
+import com.example.book.orm.standard.jpa.entity.rule.Policy;
+import com.example.book.orm.standard.jpa.entity.rule.Rule;
+import com.example.book.orm.standard.jpa.entity.rule.Service;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

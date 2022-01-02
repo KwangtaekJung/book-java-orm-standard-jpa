@@ -1,8 +1,7 @@
-package com.example.book.orm.standard.jpa.rule;
+package com.example.book.orm.standard.jpa.entity.rule;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -10,30 +9,33 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
-import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Getter @Setter
-public class Service {
+public class Network {
 
     @Id @GeneratedValue
-    @Column(name = "service_id")
+    @Column(name = "network_id")
     private Long id;
 
-    private String state;
     private String type;
+    private String ipAddress;
 
     @ManyToOne
     @JoinColumn(name = "rule_id")
     private Rule rule;
 
-    //==Convenient Method===
     public void setRule(Rule rule) {
         if (this.rule != null) {
-            this.rule.getServices().remove(this);
+            //TODO
         }
+
         this.rule = rule;
-        this.rule.getServices().add(this);
+        if (Objects.equals(this.type, "SOURCE")) {
+            this.rule.getSourceNetworks().add(this);
+        } else if (Objects.equals(this.type, "DESTINATION")) {
+            this.rule.getDestinationNetworks().add(this);
+        }
     }
 }

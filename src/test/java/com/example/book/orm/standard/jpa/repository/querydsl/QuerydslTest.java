@@ -1,10 +1,9 @@
-package com.example.book.orm.standard.jpa.querydsl;
+package com.example.book.orm.standard.jpa.repository.querydsl;
 
 import com.example.book.orm.standard.jpa.entity.Member;
 import com.example.book.orm.standard.jpa.entity.QMember;
 import com.example.book.orm.standard.jpa.entity.QTeam;
 import com.example.book.orm.standard.jpa.entity.Team;
-import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -14,7 +13,6 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
