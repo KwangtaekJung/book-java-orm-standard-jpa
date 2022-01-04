@@ -26,6 +26,7 @@ import javax.persistence.TypedQuery;
 import java.math.BigInteger;
 import java.util.List;
 
+@Tag("ALL")
 @Tag("JPA")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

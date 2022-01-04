@@ -6,8 +6,13 @@ import com.example.book.orm.standard.jpa.entity.QTeam;
 import com.example.book.orm.standard.jpa.entity.Team;
 import com.example.book.orm.standard.jpa.entity.TeamDTO;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.NumberPath;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -30,6 +35,9 @@ import javax.persistence.TypedQuery;
 import java.math.BigInteger;
 import java.util.List;
 
+import static com.querydsl.core.types.ExpressionUtils.count;
+
+@Tag("ALL")
 @Tag("JPA")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -70,11 +78,11 @@ public class JpaReadTest {
         team1.setName("Team1");
         em.persist(team1);
 
-        for (int i=1; i<=3; i++) {
+        for (int i = 1; i <= 3; i++) {
             Member member = new Member();
-            member.setId((long) (100+i));
-            member.setUsername("User"+member.getId());
-            member.setAge(30+i);
+            member.setId((long) (100 + i));
+            member.setUsername("User" + member.getId());
+            member.setAge(30 + i);
             member.setTeam(team1);
             em.persist(member);
         }
@@ -85,11 +93,11 @@ public class JpaReadTest {
         team2.setId(2L);
         team2.setName("Team2");
 
-        for (int i=1; i<=5; i++) {
+        for (int i = 1; i <= 5; i++) {
             Member member = new Member();
-            member.setId((long) (200+i));
-            member.setUsername("User"+member.getId());
-            member.setAge(40+i);
+            member.setId((long) (200 + i));
+            member.setUsername("User" + member.getId());
+            member.setAge(40 + i);
             member.setTeam(team2);
         }
         em.persist(team2);
@@ -233,15 +241,61 @@ public class JpaReadTest {
     }
 
     @Test
-    @DisplayName("114. [JPA][READ] JPQL Projection - Closed Class-Based Projection")
+    @DisplayName("114. [JPA][READ] Closed Class-Based Projection - JPQL & ORDER BY function")
     public void read_jqpl_classBased_projection_closed() {
+        //참고) [JPQL] Integer to Long : CAST(XXX AS long)
         String jpql = "SELECT new com.example.book.orm.standard.jpa.entity.TeamDTO(t.name, SIZE(t.members)) " +
-                " FROM Team t";
+                " FROM Team t" +
+                " ORDER BY SIZE(t.members) DESC";
 
         List<TeamDTO> teams = em.createQuery(jpql, TeamDTO.class)
                 .getResultList();
 
         teams.forEach(System.out::println);
+    }
+
+    @Test
+    @DisplayName("115. [JPA][READ] Closed-Based Projection - QueryDSL & orderBy function")
+    //Team 의 멤버 수로 정렬한다.
+    //alias 없는 경우로써 count()를 포함하는 서브 쿼리가 2번 나간다.
+    //참고) [QueryDSL] Integer to Long: team.members.size().longValue()
+    public void read_closedBasedProjection_queryDSL_noAlias() {
+        JPAQueryFactory queryFactory = new JPAQueryFactory(em);
+
+        List<TeamDTO> teamDTOs = queryFactory
+                .select(Projections.constructor(TeamDTO.class,
+                        team.name,
+                        team.members.size()))
+                .from(team)
+                .orderBy(team.members.size().desc())
+                .fetch();
+
+        teamDTOs.forEach(System.out::println);
+    }
+
+    @Test
+    @DisplayName("116. [JPA][READ] Closed-Based Projection - QueryDSL & orderBy alias of function")
+    public void read_closedBasedProjection_queryDSL() {
+        //Team 의 멤버 수로 정렬한다.
+        //alias 없는 경우에는 count()를 포함하는 서브 쿼리가 2번 나간다.
+        //alias를 걸면 서브 쿼리가 2번 나가지 않는다. 또한 pageable를 통해 동적 쿼리도 가능하지 않을까??
+        JPAQueryFactory queryFactory = new JPAQueryFactory(em);
+        NumberPath<Integer> memberCount = Expressions.numberPath(Integer.class, "memberCount");
+
+        List<TeamDTO> teamDTOs = queryFactory
+                .select(Projections.constructor(TeamDTO.class,
+                        team.name,
+                        ExpressionUtils.as(
+                                JPAExpressions
+                                        .select(member.count().intValue())
+                                        .from(member)
+                                        .where(team.id.eq(member.team.id)), "memberCount")))
+//                team.members.size(),"memberCount")))
+                .from(team)
+                .orderBy(memberCount.desc())
+                .fetch();
+
+        teamDTOs.forEach(System.out::println);
     }
 
     @Test
