@@ -7,6 +7,7 @@ import com.example.book.orm.standard.jpa.entity.Team;
 import com.example.book.orm.standard.jpa.entity.TeamDTO;
 import com.example.book.orm.standard.jpa.repository.springdatajpa.SpringDataJpaMemberRepository;
 import com.example.book.orm.standard.jpa.repository.springdatajpa.SpringDataJpaTeamRepository;
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.EntityPath;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Order;
@@ -21,6 +22,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Tag;
@@ -65,17 +67,12 @@ public class SpringDataJPAReadTest {
     private final QTeam team = new QTeam("team");
 
     private Querydsl querydsl;
-//    private EntityManager entityManager;
+    //    private EntityManager entityManager;
     private JPAQueryFactory queryFactory;
 
     @BeforeAll
     public void beforeAll() {
 
-        JpaEntityInformation entityInformation = JpaEntityInformationSupport.getEntityInformation(Team.class, em);
-        SimpleEntityPathResolver resolver = SimpleEntityPathResolver.INSTANCE;
-        EntityPath path = resolver.createPath(entityInformation.getJavaType());
-        querydsl = new Querydsl(em, new PathBuilder<>(path.getType(), path.getMetadata()));
-        queryFactory = new JPAQueryFactory(em);
 
         // Team1 ------------------------
         Team team1 = new Team();
@@ -126,12 +123,18 @@ public class SpringDataJPAReadTest {
 
     @Test
     @DisplayName("120. [SpringDataJPA][READ] Pageable - QueryDSL")
-    public void read_springDataJPA_Pagination_queryMethod() {
+    @Disabled
+    public void read_springDataJPA_pageable_queryDSL() {
 
+        JpaEntityInformation entityInformation = JpaEntityInformationSupport.getEntityInformation(Team.class, em);
+        SimpleEntityPathResolver resolver = SimpleEntityPathResolver.INSTANCE;
+        EntityPath path = resolver.createPath(entityInformation.getJavaType());
+        querydsl = new Querydsl(em, new PathBuilder<>(path.getType(), path.getMetadata()));
+        queryFactory = new JPAQueryFactory(em);
 
         NumberPath<Integer> memberCount = Expressions.numberPath(Integer.class, "mCount");
 //        OrderSpecifier<Integer> integerOrderSpecifier = new OrderSpecifier<>(Order.DESC, memberCount);
-        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "mCount"));
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "name"));
 
         JPAQuery<TeamDTO> jpaQuery = queryFactory
                 .select(Projections.constructor(TeamDTO.class,
@@ -150,6 +153,40 @@ public class SpringDataJPAReadTest {
 
         teamDTOPage.getContent().forEach(System.out::println);
 
+    }
+
+    @Test
+    @DisplayName("121. [SpringDataJPA][READ] Pageable - QueryDSL")
+    public void read_springDataJPA_Pagination_queryMethod() {
+
+        JpaEntityInformation entityInformation = JpaEntityInformationSupport.getEntityInformation(Team.class, em);
+        SimpleEntityPathResolver resolver = SimpleEntityPathResolver.INSTANCE;
+        EntityPath path = resolver.createPath(entityInformation.getJavaType());
+        querydsl = new Querydsl(em, new PathBuilder<>(path.getType(), path.getMetadata()));
+        queryFactory = new JPAQueryFactory(em);
+
+        NumberPath<Integer> cnt = Expressions.numberPath(Integer.class, "cnt");
+//        OrderSpecifier<Integer> integerOrderSpecifier = new OrderSpecifier<>(Order.DESC, memberCount);
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "cnt"));
+
+        JPAQuery<Tuple> jpaQuery = queryFactory
+                .select(team.name,
+                        ExpressionUtils.as(
+                                JPAExpressions
+                                        .select(member.count().intValue())
+                                        .from(member)
+                                        .where(team.id.eq(member.team.id)), cnt))
+                .from(team);
+        //                .orderBy(memberCount.desc())
+//                .orderBy(getOrderSpecifier(pageable.getSort()).toArray(OrderSpecifier[]::new))
+//                .fetch()
+        List<Tuple> content = querydsl.applyPagination(pageable, jpaQuery).fetch();
+        Page<Tuple> tuplePage = PageableExecutionUtils.getPage(content, pageable, jpaQuery::fetchCount);
+
+        tuplePage.getContent().forEach(row -> {
+            System.out.println(String.format("team.name(%s), team.members.size(%s)",
+                    row.get(0, String.class), row.get(1, Integer.class)));
+        });
     }
 
     private List<OrderSpecifier> getOrderSpecifier(Sort sort) {
