@@ -1,5 +1,6 @@
 package com.example.book.orm.standard.jpa.entity;
 
+import com.querydsl.core.annotations.QueryProjection;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
@@ -15,11 +16,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
 public class TeamDTO {
 
     private String name;
     private Integer memberCount;
 
+    @QueryProjection
+    public TeamDTO(String name, Integer memberCount) {
+        this.name = name;
+        this.memberCount = memberCount;
+    }
 }
